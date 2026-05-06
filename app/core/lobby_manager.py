@@ -247,6 +247,54 @@ class LobbyManager:
                 actor_player_id=player_id,
             )
 
+    async def kick_player(
+        self,
+        lobby_id: str,
+        actor_player_id: str,
+        target_player_id: str,
+    ) -> Lobby:
+        """Remove a player from a lobby at the leader's request."""
+        async with self._lock:
+            lobby = self._lobbies.get(lobby_id)
+            if lobby is None:
+                msg = "Lobby not found"
+                raise LookupError(msg)
+            if actor_player_id != lobby.leader_id:
+                msg = "Only the room leader can kick players"
+                raise ValueError(msg)
+            if target_player_id == actor_player_id:
+                msg = "Leader cannot kick themselves"
+                raise ValueError(msg)
+            if target_player_id not in lobby.players:
+                msg = "Player is not in this lobby"
+                raise ValueError(msg)
+
+            new_players = tuple(
+                player_id for player_id in lobby.players if player_id != target_player_id
+            )
+            updated = lobby.model_copy(
+                update={
+                    "players": new_players,
+                    "status": self._status_for_count(len(new_players), lobby.max_players),
+                }
+            )
+            self._lobbies[lobby_id] = updated
+
+        await connection_manager.update_player(
+            target_player_id,
+            status=PlayerStatus.IDLE,
+            current_room=None,
+            is_ready=False,
+        )
+        await connection_manager.clear_subscription(target_player_id, "lobby")
+        await connection_manager.clear_subscription(target_player_id, "room")
+        await self._broadcast_lobby_update(
+            updated,
+            change="kicked",
+            actor_player_id=actor_player_id,
+        )
+        return updated
+
     async def get_lobby(self, lobby_id: str) -> Lobby | None:
         """Return a lobby by id, or None if missing."""
         async with self._lock:

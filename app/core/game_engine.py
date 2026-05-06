@@ -316,6 +316,28 @@ class GameEngine:
             return None, True
         return str(top["player_id"]), False
 
+    @staticmethod
+    def _resolve_winner_from_rankings(rankings: list[dict[str, Any]]) -> tuple[str | None, bool]:
+        if not rankings:
+            return None, True
+        if len(rankings) == 1:
+            return str(rankings[0].get("player_id", "")) or None, False
+        top = rankings[0]
+        second = rankings[1]
+        top_tuple = (
+            int(top.get("objective_index", 0)),
+            float(top.get("accuracy", 0.0)),
+            float(top.get("wpm", 0.0)),
+        )
+        second_tuple = (
+            int(second.get("objective_index", 0)),
+            float(second.get("accuracy", 0.0)),
+            float(second.get("wpm", 0.0)),
+        )
+        if top_tuple == second_tuple:
+            return None, True
+        return str(top.get("player_id", "")) or None, False
+
     def _finish_round_locked(
         self,
         room: GameRoom,
@@ -747,7 +769,26 @@ class GameEngine:
 
         async with self._lock:
             now = time.time()
-            changed = self._finish_round_locked(room, GameEndReason.FORFEIT, now)
+            remaining = tuple(
+                pid for pid in room.players if pid != forfeiting_player_id
+            )
+            if not remaining:
+                winner = None
+                draw = True
+            elif len(remaining) == 1:
+                winner = remaining[0]
+                draw = False
+            else:
+                rankings = self._result_rankings_locked(room, remaining, now)
+                winner, draw = self._resolve_winner_from_rankings(rankings)
+
+            changed = self._finish_round_locked(
+                room,
+                GameEndReason.FORFEIT,
+                now,
+                winner_player_id=winner,
+                draw=draw,
+            )
             if not changed:
                 return
             room.game_state["forfeit_player_id"] = forfeiting_player_id

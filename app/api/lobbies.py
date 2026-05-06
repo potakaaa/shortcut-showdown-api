@@ -46,6 +46,13 @@ class SetRoundDurationBody(BaseModel):
     round_duration_seconds: int
 
 
+class KickPlayerBody(BaseModel):
+    """Request body for kicking a player from a lobby."""
+
+    player_id: str
+    target_player_id: str
+
+
 async def _lobby_to_response(lobby: Lobby) -> LobbyView:
     players: list[LobbyPlayerView] = []
     for player_id in lobby.players:
@@ -261,6 +268,28 @@ async def set_round_duration(lobby_id: str, body: SetRoundDurationBody) -> Lobby
     try:
         lobby = await lobby_manager.set_round_duration(
             lobby_id, body.player_id, body.round_duration_seconds
+        )
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    return await _lobby_to_response(lobby)
+
+
+@router.post("/{lobby_id}/kick", response_model=LobbyView)
+async def kick_player(lobby_id: str, body: KickPlayerBody) -> LobbyView:
+    """Host removes a player from the lobby."""
+    try:
+        lobby = await lobby_manager.kick_player(
+            lobby_id,
+            body.player_id,
+            body.target_player_id,
         )
     except LookupError as exc:
         raise HTTPException(
