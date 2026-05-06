@@ -41,9 +41,18 @@ def read_root() -> dict[str, str]:
 if __name__ == "__main__":
     import uvicorn
 
+    uvicorn_kwargs = {
+        "host": settings.host,
+        "port": settings.port,
+        "reload": False,
+    }
+    
+    # Enable WSS (WebSocket Secure) if certificates are provided
+    if settings.ssl_certfile and settings.ssl_keyfile:
+        uvicorn_kwargs["ssl_certfile"] = settings.ssl_certfile
+        uvicorn_kwargs["ssl_keyfile"] = settings.ssl_keyfile
+    
     uvicorn.run(
         "app.main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=False,
+        **uvicorn_kwargs,
     )

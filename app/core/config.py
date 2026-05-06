@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     max_attempts_per_second: int = 8
     # Comma-separated; required for browser clients (e.g. Next.js) on another origin
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    # SSL/TLS certificate paths for WSS (WebSocket Secure)
+    ssl_certfile: str | None = None
+    ssl_keyfile: str | None = None
 
 
 @lru_cache
