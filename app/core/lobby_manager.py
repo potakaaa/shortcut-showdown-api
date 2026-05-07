@@ -126,8 +126,17 @@ class LobbyManager:
                 msg = "Unknown or disconnected player_id"
                 raise LookupError(msg)
             if player.current_room is not None:
-                msg = "Player is already in a lobby"
-                raise ValueError(msg)
+                existing = self._lobbies.get(player.current_room)
+                if existing is None or player_id not in existing.players:
+                    await connection_manager.update_player(
+                        player_id,
+                        status=PlayerStatus.IDLE,
+                        current_room=None,
+                        is_ready=False,
+                    )
+                else:
+                    msg = "Player is already in a lobby"
+                    raise ValueError(msg)
 
             lobby_id = await self._generate_lobby_id()
             created = Lobby(
@@ -175,8 +184,17 @@ class LobbyManager:
                 return lobby
 
             if player.current_room is not None and player.current_room != lobby_id:
-                msg = "Player is already in another lobby"
-                raise ValueError(msg)
+                existing = self._lobbies.get(player.current_room)
+                if existing is None or player_id not in existing.players:
+                    await connection_manager.update_player(
+                        player_id,
+                        status=PlayerStatus.IDLE,
+                        current_room=None,
+                        is_ready=False,
+                    )
+                else:
+                    msg = "Player is already in another lobby"
+                    raise ValueError(msg)
 
             if len(lobby.players) >= lobby.max_players:
                 msg = "Lobby is full"
@@ -639,8 +657,17 @@ class LobbyManager:
                 msg = "Unknown or disconnected player_id"
                 raise LookupError(msg)
             if player.current_room is not None:
-                msg = "Player is already in a lobby"
-                raise ValueError(msg)
+                existing = self._lobbies.get(player.current_room)
+                if existing is None or player_id not in existing.players:
+                    await connection_manager.update_player(
+                        player_id,
+                        status=PlayerStatus.IDLE,
+                        current_room=None,
+                        is_ready=False,
+                    )
+                else:
+                    msg = "Player is already in a lobby"
+                    raise ValueError(msg)
 
             # Find all unlocked lobbies that are not full
             available_lobbies = [
