@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, status
 
 from app.core.connection_manager import connection_manager
+from app.core.lobby_manager import lobby_manager
 from app.models.player import (
     PlayerIdentityView,
     UpdatePlayerRequest,
@@ -56,6 +57,13 @@ async def update_player_display_name(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="player_not_found",
+        )
+
+    if updated.current_room:
+        await lobby_manager.broadcast_lobby_refresh(
+            updated.current_room,
+            change="player_updated",
+            actor_player_id=updated.id,
         )
 
     return PlayerIdentityView(

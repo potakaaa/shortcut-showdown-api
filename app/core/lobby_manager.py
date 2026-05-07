@@ -115,6 +115,22 @@ class LobbyManager:
             ),
         )
 
+    async def broadcast_lobby_refresh(
+        self,
+        lobby_id: str,
+        *,
+        change: str,
+        actor_player_id: str | None = None,
+    ) -> None:
+        lobby = await self.get_lobby(lobby_id)
+        if lobby is None:
+            return
+        await self._broadcast_lobby_update(
+            lobby,
+            change=change,
+            actor_player_id=actor_player_id,
+        )
+
     async def create_lobby(self, player_id: str) -> Lobby:
         """Create a lobby with `player_id` as the first member."""
         settings = get_settings()
