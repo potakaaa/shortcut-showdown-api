@@ -243,7 +243,9 @@ class GameEngine:
             players[pid] = self._player_progress_view(progress)
 
         return GameStateView(
-            status=self._as_status(gs.get("status", GameSessionStatus.RUNNING.value)),
+            status=self._as_status(
+                gs.get("status", GameSessionStatus.RUNNING.value)
+            ),
             state_version=int(gs.get("state_version", 0)),
             server_time=now,
             round_started_at=round_started_at,
@@ -251,12 +253,16 @@ class GameEngine:
             objective_count=challenge_count,
             challenges=publicize_challenges(gs.get("challenges", [])),
             players=players,
-            finished=self._as_status(gs.get("status")) == GameSessionStatus.FINISHED,
+            finished=(
+                self._as_status(gs.get("status")) == GameSessionStatus.FINISHED
+            ),
             winner_player_id=gs.get("winner_player_id"),
             draw=bool(gs.get("draw", False)),
             end_reason=self._as_end_reason(gs.get("end_reason")),
             finished_at=(
-                float(gs.get("finished_at")) if gs.get("finished_at") is not None else None
+                float(gs.get("finished_at"))
+                if gs.get("finished_at") is not None
+                else None
             ),
         )
 
@@ -317,7 +323,9 @@ class GameEngine:
         return str(top["player_id"]), False
 
     @staticmethod
-    def _resolve_winner_from_rankings(rankings: list[dict[str, Any]]) -> tuple[str | None, bool]:
+    def _resolve_winner_from_rankings(
+        rankings: list[dict[str, Any]],
+    ) -> tuple[str | None, bool]:
         if not rankings:
             return None, True
         if len(rankings) == 1:
@@ -353,9 +361,8 @@ class GameEngine:
             return False
 
         if reason in {GameEndReason.TIME, GameEndReason.FORFEIT} and not draw:
-            computed_winner, computed_draw = self._resolve_timeout_or_forfeit_winner_locked(
-                room
-            )
+            computed = self._resolve_timeout_or_forfeit_winner_locked(room)
+            computed_winner, computed_draw = computed
             if winner_player_id is None:
                 winner_player_id = computed_winner
             draw = computed_draw
@@ -486,11 +493,16 @@ class GameEngine:
             roster = self._match_roster_locked(room)
             rankings = self._result_rankings_locked(room, roster, ended_at)
 
-        current_players = await asyncio.gather(
-            *(connection_manager.get_player(pid) for pid in roster)
-        ) if roster else []
+        if roster:
+            current_players = await asyncio.gather(
+                *(connection_manager.get_player(pid) for pid in roster)
+            )
+        else:
+            current_players = []
+
         current_by_id = {
-            pid: player for pid, player in zip(roster, current_players)
+            pid: player
+            for pid, player in zip(roster, current_players)
         }
 
         placements: list[MatchPlacementView] = []
@@ -599,20 +611,25 @@ class GameEngine:
                     reason="invalid_input_format",
                 )
             else:
-                receipts = gs.setdefault("attempt_receipts", {}).setdefault(player_id, {})
+                attempt_receipts = gs.setdefault("attempt_receipts", {})
+                receipts = attempt_receipts.setdefault(player_id, {})
                 if attempt_id and attempt_id in receipts:
                     cached = receipts[attempt_id]
                     state = self._serialize_state_locked(room, now)
+                    cached_obj_index = int(
+                        cached.get("objective_index", objective_index)
+                    )
+                    cached_state_version = int(
+                        cached.get("state_version", state.state_version)
+                    )
                     response = AttemptResponse(
                         room_id=room_id,
                         player_id=player_id,
                         accepted=bool(cached.get("accepted", False)),
                         reason=cached.get("reason"),
                         correct=cached.get("correct"),
-                        objective_index=int(
-                            cached.get("objective_index", objective_index)
-                        ),
-                        state_version=int(cached.get("state_version", state.state_version)),
+                        objective_index=cached_obj_index,
+                        state_version=cached_state_version,
                         game_state=state,
                     )
                 else:
@@ -660,43 +677,56 @@ class GameEngine:
                                     reason="already_finished",
                                 )
                             else:
-                                expected_keys = self._normalize_keys(
-                                    list(challenges[expected_index].get("expectedKeys", []))
+                                raw_expected = challenges[expected_index].get(
+                                    "expectedKeys", []
                                 )
+                                expected_keys = self._normalize_keys(list(raw_expected))
                                 provided_keys = self._normalize_keys(keys)
                                 correct = expected_keys == provided_keys
 
-                                progress["attempts_total"] = (
-                                    int(progress.get("attempts_total", 0)) + 1
-                                )
+                                attempts_total_val = int(
+                                    progress.get("attempts_total", 0)
+                                ) + 1
+                                progress["attempts_total"] = attempts_total_val
                                 if correct:
-                                    progress["attempts_correct"] = (
-                                        int(progress.get("attempts_correct", 0)) + 1
-                                    )
+                                    attempts_correct_val = int(
+                                        progress.get("attempts_correct", 0)
+                                    ) + 1
+                                    progress["attempts_correct"] = attempts_correct_val
                                     progress["objective_index"] = expected_index + 1
-                                    progress["streak"] = int(progress.get("streak", 0)) + 1
+                                    streak_val = int(
+                                        progress.get("streak", 0)
+                                    ) + 1
+                                    progress["streak"] = streak_val
 
+                                    current_index_after = int(
+                                        progress["objective_index"]
+                                    )
                                     if (
                                         challenge_count > 0
-                                        and int(progress["objective_index"]) >= challenge_count
+                                        and current_index_after >= challenge_count
                                     ):
                                         progress["finished"] = True
                                         progress["finished_at"] = now
+                                        finish_kwargs = {
+                                            "winner_player_id": player_id,
+                                            "draw": False,
+                                            "increment_version": False,
+                                        }
                                         self._finish_round_locked(
                                             room,
                                             GameEndReason.GOAL,
                                             now,
-                                            winner_player_id=player_id,
-                                            draw=False,
-                                            increment_version=False,
+                                            **finish_kwargs,
                                         )
                                 else:
                                     progress["streak"] = 0
 
+                                start_time = float(gs.get("round_started_at", now))
                                 self._recompute_metrics(
                                     progress,
                                     challenge_count,
-                                    float(gs.get("round_started_at", now)),
+                                    start_time,
                                     now,
                                 )
                                 self._increment_state_version(gs)
@@ -706,24 +736,32 @@ class GameEngine:
                                 if state.finished:
                                     result_event = self._result_event_locked(room)
 
+                                index_val = int(progress.get("objective_index", 0))
+                                score_val = int(progress.get("attempts_correct", 0))
+
+                                progress_payload = {
+                                    "room_id": room.id,
+                                    "player_id": player_id,
+                                    "index": index_val,
+                                    "score": score_val,
+                                    "correct": correct,
+                                }
                                 progress_event = build_message(
                                     "progress_update",
-                                    {
-                                        "room_id": room.id,
-                                        "player_id": player_id,
-                                        "index": int(progress.get("objective_index", 0)),
-                                        "score": int(progress.get("attempts_correct", 0)),
-                                        "correct": correct,
-                                    },
+                                    progress_payload,
                                 )
                                 if not correct:
+                                    penalty_payload = {
+                                        "message": "incorrect_input",
+                                        "score": score_val,
+                                    }
                                     penalty_event = build_message(
                                         "penalty",
-                                        {
-                                            "message": "incorrect_input",
-                                            "score": int(progress.get("attempts_correct", 0)),
-                                        },
+                                        penalty_payload,
                                     )
+
+                                obj_index_val = int(progress.get("objective_index", 0))
+                                state_version_val = state.state_version
 
                                 response = AttemptResponse(
                                     room_id=room_id,
@@ -731,8 +769,8 @@ class GameEngine:
                                     accepted=True,
                                     reason=None,
                                     correct=correct,
-                                    objective_index=int(progress.get("objective_index", 0)),
-                                    state_version=state.state_version,
+                                    objective_index=obj_index_val,
+                                    state_version=state_version_val,
                                     game_state=state,
                                 )
 
@@ -749,7 +787,9 @@ class GameEngine:
             raise RuntimeError("attempt response was not generated")
 
         if penalty_event is not None:
-            await connection_manager.send_personal_message(player_id, penalty_event)
+            await connection_manager.send_personal_message(
+                player_id, penalty_event
+            )
         if progress_event is not None:
             await self._broadcast_to_room(room, progress_event)
         if should_broadcast_state:

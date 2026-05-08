@@ -10,6 +10,7 @@ from app.core.game_engine import game_engine
 from app.core.game_room_manager import game_room_manager
 from app.core.lobby_manager import lobby_manager
 from app.core.websocket_protocol import build_message
+import logging
 from app.models.game_room import (
     AttemptRequest,
     AttemptResponse,
@@ -105,7 +106,10 @@ async def get_match_results(
     status_code=status.HTTP_200_OK,
     response_model=RematchAcceptanceResponse,
 )
-async def accept_rematch(room_id: str, body: RematchRequest) -> RematchAcceptanceResponse:
+async def accept_rematch(
+    room_id: str,
+    body: RematchRequest,
+) -> RematchAcceptanceResponse:
     """Player accepts rematch; auto-creates lobby if all accept."""
     room = await game_room_manager.get_room(room_id)
     if room is None:
@@ -135,10 +139,14 @@ async def accept_rematch(room_id: str, body: RematchRequest) -> RematchAcceptanc
     acceptances = room.game_state.get("rematch_acceptances", {})
     if not isinstance(acceptances, dict):
         acceptances = {}
-    
+
     acceptances[body.player_id] = True
-    pending = [p for p in room.players if p not in acceptances or not acceptances[p]]
-    
+    pending = [
+        p
+        for p in room.players
+        if p not in acceptances or not acceptances[p]
+    ]
+
     # Update room with acceptances
     new_game_state = dict(room.game_state)
     new_game_state["rematch_acceptances"] = acceptances
@@ -149,17 +157,21 @@ async def accept_rematch(room_id: str, body: RematchRequest) -> RematchAcceptanc
         locked=room.locked,
     )
     await game_room_manager.register_room(new_room)
-    
+
     # Check if we can start
     active_players = []
     for pid in room.players:
         p = await connection_manager.get_player(pid)
         if p is not None:
             active_players.append(pid)
-    
+
     pending = [pid for pid in active_players if pid not in acceptances]
-    all_accepted_ids = [pid for pid, val in acceptances.items() if val is True]
-    
+    all_accepted_ids = [
+        pid
+        for pid, val in acceptances.items()
+        if val is True
+    ]
+
     # Broadcast acceptance update to everyone in the room
     await connection_manager.broadcast_to_scope(
         "room",
@@ -173,11 +185,14 @@ async def accept_rematch(room_id: str, body: RematchRequest) -> RematchAcceptanc
             },
         ),
     )
-    
+
     if not pending and all_accepted_ids:
         # Everyone active has decided, and at least one person accepted
         try:
-            lobby = await lobby_manager.create_rematch_lobby(tuple(all_accepted_ids), room_id)
+            lobby = await lobby_manager.create_rematch_lobby(
+                tuple(all_accepted_ids),
+                room_id,
+            )
             await connection_manager.broadcast_to_scope(
                 "room",
                 room_id,
@@ -198,7 +213,7 @@ async def accept_rematch(room_id: str, body: RematchRequest) -> RematchAcceptanc
             )
         except ValueError as exc:
             # If creation fails (e.g. players moved), just return status
-            logger.warning(f"Rematch lobby creation failed: {exc}")
+            logging.warning("Rematch lobby creation failed: %s", exc)
 
     return RematchAcceptanceResponse(
         room_id=room_id,
@@ -214,7 +229,10 @@ async def accept_rematch(room_id: str, body: RematchRequest) -> RematchAcceptanc
     status_code=status.HTTP_200_OK,
     response_model=RematchAcceptanceResponse,
 )
-async def decline_rematch(room_id: str, body: RematchRequest) -> RematchAcceptanceResponse:
+async def decline_rematch(
+    room_id: str,
+    body: RematchRequest,
+) -> RematchAcceptanceResponse:
     """Player declines rematch."""
     room = await game_room_manager.get_room(room_id)
     if room is None:
@@ -239,10 +257,14 @@ async def decline_rematch(room_id: str, body: RematchRequest) -> RematchAcceptan
     acceptances = room.game_state.get("rematch_acceptances", {})
     if not isinstance(acceptances, dict):
         acceptances = {}
-    
+
     acceptances[body.player_id] = False
-    pending = [p for p in room.players if p not in acceptances or acceptances[p] is None]
-    
+    pending = [
+        p
+        for p in room.players
+        if p not in acceptances or acceptances[p] is None
+    ]
+
     # Update room with decline
     new_game_state = dict(room.game_state)
     new_game_state["rematch_acceptances"] = acceptances
@@ -253,20 +275,27 @@ async def decline_rematch(room_id: str, body: RematchRequest) -> RematchAcceptan
         locked=room.locked,
     )
     await game_room_manager.register_room(new_room)
-    
+
     # Check if we can start
     active_players = []
     for pid in room.players:
         p = await connection_manager.get_player(pid)
         if p is not None:
             active_players.append(pid)
-            
+
     pending = [pid for pid in active_players if pid not in acceptances]
-    all_accepted_ids = [pid for pid, val in acceptances.items() if val is True]
+    all_accepted_ids = [
+        pid
+        for pid, val in acceptances.items()
+        if val is True
+    ]
 
     if not pending and all_accepted_ids:
         try:
-            lobby = await lobby_manager.create_rematch_lobby(tuple(all_accepted_ids), room_id)
+            lobby = await lobby_manager.create_rematch_lobby(
+                tuple(all_accepted_ids),
+                room_id,
+            )
             await connection_manager.broadcast_to_scope(
                 "room",
                 room_id,
@@ -293,7 +322,7 @@ async def decline_rematch(room_id: str, body: RematchRequest) -> RematchAcceptan
             },
         ),
     )
-    
+
     # Also send an update for pending players
     await connection_manager.broadcast_to_scope(
         "room",
@@ -307,7 +336,7 @@ async def decline_rematch(room_id: str, body: RematchRequest) -> RematchAcceptan
             },
         ),
     )
-    
+
     return RematchAcceptanceResponse(
         room_id=room_id,
         player_id=body.player_id,
@@ -322,7 +351,10 @@ async def decline_rematch(room_id: str, body: RematchRequest) -> RematchAcceptan
     status_code=status.HTTP_201_CREATED,
     response_model=RematchResponse,
 )
-async def create_rematch(room_id: str, body: RematchRequest) -> RematchResponse:
+async def create_rematch(
+    room_id: str,
+    body: RematchRequest,
+) -> RematchResponse:
     """Create a fresh lobby for the same finished roster (legacy endpoint)."""
     room = await game_room_manager.get_room(room_id)
     if room is None:
@@ -356,7 +388,10 @@ async def create_rematch(room_id: str, body: RematchRequest) -> RematchResponse:
         )
 
     try:
-        lobby = await lobby_manager.create_rematch_lobby(roster, room_id)
+        lobby = await lobby_manager.create_rematch_lobby(
+            roster,
+            room_id,
+        )
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

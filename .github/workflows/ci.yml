@@ -46,6 +46,14 @@ jobs:
     needs: test
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Node (ensure pnpm available if needed)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Enable corepack / pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate || true
       - uses: actions/setup-python@v4
         with:
           python-version: "3.11"

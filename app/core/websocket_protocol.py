@@ -5,7 +5,14 @@ from __future__ import annotations
 from typing import Any
 
 PROTOCOL_VERSION = 1
-_RESERVED_KEYS = frozenset({"v", "type", "event", "payload"})
+_RESERVED_KEYS = frozenset(
+    {
+        "v",
+        "type",
+        "event",
+        "payload",
+    }
+)
 
 
 def build_message(
@@ -28,14 +35,20 @@ def build_message(
     return message
 
 
-def build_error(code: str, message: str | None = None, **details: Any) -> dict[str, Any]:
+def build_error(
+    code: str,
+    message: str | None = None,
+    **details: Any,
+) -> dict[str, Any]:
     """Build a typed error message for client-visible socket failures."""
     payload: dict[str, Any] = {"code": code, "message": message or code}
     payload.update(details)
     return build_message("error", payload)
 
 
-def parse_inbound_message(message: Any) -> tuple[str | None, dict[str, Any], Any | None]:
+def parse_inbound_message(
+    message: Any,
+) -> tuple[str | None, dict[str, Any], Any | None]:
     """Normalize inbound JSON into a message type and payload dict."""
     if not isinstance(message, dict):
         return None, {}, None
