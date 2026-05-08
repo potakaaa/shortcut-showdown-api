@@ -87,7 +87,7 @@ class LobbyManager:
             "players": players,
             "status": lobby.status.value,
             "challenge_count": lobby.challenge_count,
-            "round_duration_seconds": s.round_duration_seconds,
+            "round_duration_seconds": lobby.round_duration_seconds,
             "max_attempts_per_second": s.max_attempts_per_second,
             "locked": lobby.locked,
             "max_players": lobby.max_players,
