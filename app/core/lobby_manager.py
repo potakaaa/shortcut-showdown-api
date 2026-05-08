@@ -823,8 +823,13 @@ class LobbyManager:
 
             updated = lobby.model_copy(update={"round_duration_seconds": duration})
             self._lobbies[lobby_id] = updated
-            await self._broadcast_lobby_update(updated, change="settings")
-            return updated
+
+        await self._broadcast_lobby_update(
+            updated,
+            change="round_duration_changed",
+            actor_player_id=player_id,
+        )
+        return updated
 
     async def reset(self) -> None:
         """Clear all lobbies (used by tests)."""
