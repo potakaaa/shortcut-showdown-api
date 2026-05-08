@@ -8,9 +8,6 @@ import random
 import secrets
 import time
 from typing import Any
-
-logger = logging.getLogger(__name__)
-
 from app.core.config import get_settings
 from app.core.connection_manager import connection_manager
 from app.core.game_room_manager import game_room_manager
@@ -22,6 +19,8 @@ from app.services.shortcut_engine import (
 from app.models.game_room import GameRoom, GameSessionStatus
 from app.models.lobby import Lobby, LobbyStatus
 from app.models.player import PlayerStatus
+
+logger = logging.getLogger(__name__)
 
 
 _LOBBY_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
@@ -217,10 +216,11 @@ class LobbyManager:
                 raise ValueError(msg)
 
             new_players = (*lobby.players, player_id)
+            status_val = self._status_for_count(len(new_players), lobby.max_players)
             updated = lobby.model_copy(
                 update={
                     "players": new_players,
-                    "status": self._status_for_count(len(new_players), lobby.max_players),
+                    "status": status_val,
                 }
             )
             self._lobbies[lobby_id] = updated
@@ -251,15 +251,20 @@ class LobbyManager:
                 msg = "Player is not in this lobby"
                 raise ValueError(msg)
 
-            new_players = tuple(p for p in lobby.players if p != player_id)
+            new_players = tuple(
+                p for p in lobby.players if p != player_id
+            )
             if not new_players:
                 del self._lobbies[lobby_id]
             else:
                 new_leader = _leader_after_remove(lobby, player_id, new_players)
+                status_val = self._status_for_count(
+                    len(new_players), lobby.max_players
+                )
                 self._lobbies[lobby_id] = lobby.model_copy(
                     update={
                         "players": new_players,
-                        "status": self._status_for_count(len(new_players), lobby.max_players),
+                        "status": status_val,
                         "leader_id": new_leader,
                     }
                 )
@@ -304,12 +309,15 @@ class LobbyManager:
                 raise ValueError(msg)
 
             new_players = tuple(
-                player_id for player_id in lobby.players if player_id != target_player_id
+                player_id
+                for player_id in lobby.players
+                if player_id != target_player_id
             )
+            status_val = self._status_for_count(len(new_players), lobby.max_players)
             updated = lobby.model_copy(
                 update={
                     "players": new_players,
-                    "status": self._status_for_count(len(new_players), lobby.max_players),
+                    "status": status_val,
                 }
             )
             self._lobbies[lobby_id] = updated
@@ -354,7 +362,8 @@ class LobbyManager:
 
     async def start_game(self, lobby_id: str, player_id: str) -> GameRoom:
         """Convert a lobby into a locked game room; players move to in-game."""
-        config_settings = get_settings()
+        # Settings are fetched where needed via `get_settings()`.
+        # Don't prefetch an unused settings variable here.
         async with self._lock:
             lobby = self._lobbies.pop(lobby_id, None)
             if lobby is None:
@@ -479,12 +488,12 @@ class LobbyManager:
         """Create a new lobby for a completed match using the same roster."""
         room = await game_room_manager.get_room(source_room_id)
         settings = get_settings()
-        
+
         # Default to settings if room metadata is missing
         max_players = settings.lobby_max_players
         challenge_count = settings.challenge_count
         round_duration_seconds = settings.round_duration_seconds
-        
+
         if room and "max_players" in room.game_state:
             max_players = room.game_state["max_players"]
         if room and "challenge_count" in room.game_state:
@@ -662,7 +671,10 @@ class LobbyManager:
                 msg = "Only the room leader can change max players"
                 raise ValueError(msg)
             if len(lobby.players) > max_players:
-                msg = f"Cannot set max_players to {max_players}: {len(lobby.players)} players already in lobby"
+                msg = (
+                    f"Cannot set max_players to {max_players}: "
+                    f"{len(lobby.players)} players already in lobby"
+                )
                 raise ValueError(msg)
 
             updated = lobby.model_copy(
@@ -717,11 +729,13 @@ class LobbyManager:
                 updated = target_lobby.model_copy(
                     update={
                         "players": new_players,
-                        "status": self._status_for_count(len(new_players), target_lobby.max_players),
+                        "status": self._status_for_count(
+                            len(new_players), target_lobby.max_players
+                        ),
                     }
                 )
                 self._lobbies[target_id] = updated
-                
+
                 await connection_manager.update_player(
                     player_id,
                     status=PlayerStatus.LOBBY,

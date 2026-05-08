@@ -14,8 +14,11 @@ app = FastAPI(
     description="Shortcut Showdown API",
 )
 
-# Browsers preflight with OPTIONS; without CORS, /lobbies returns 405 and POST never runs
-_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+# Browsers preflight with OPTIONS; without CORS, `/lobbies` returns 405
+# and POST requests will not reach the endpoint.
+_origins = [
+    o.strip() for o in settings.cors_origins.split(",") if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
@@ -46,12 +49,12 @@ if __name__ == "__main__":
         "port": settings.port,
         "reload": False,
     }
-    
+
     # Enable WSS (WebSocket Secure) if certificates are provided
     if settings.ssl_certfile and settings.ssl_keyfile:
         uvicorn_kwargs["ssl_certfile"] = settings.ssl_certfile
         uvicorn_kwargs["ssl_keyfile"] = settings.ssl_keyfile
-    
+
     uvicorn.run(
         "app.main:app",
         **uvicorn_kwargs,

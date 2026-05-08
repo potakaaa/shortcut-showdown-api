@@ -101,10 +101,26 @@ async def run_stress_test():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Simple stress test for Shortcut Showdown API")
-    parser.add_argument("--url", default=URL, help="Target URL to test")
-    parser.add_argument("--requests", type=int, default=TOTAL_REQUESTS, help="Total number of requests to send")
-    parser.add_argument("--concurrency", type=int, default=CONCURRENT_USERS, help="Max concurrent requests")
+    parser = argparse.ArgumentParser(
+        description="Simple stress test for Shortcut Showdown API"
+    )
+    parser.add_argument(
+        "--url",
+        default=URL,
+        help="Target URL to test",
+    )
+    parser.add_argument(
+        "--requests",
+        type=int,
+        default=TOTAL_REQUESTS,
+        help="Total number of requests to send",
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=CONCURRENT_USERS,
+        help="Max concurrent requests",
+    )
     args = parser.parse_args()
 
     # allow CLI overrides
