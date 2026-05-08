@@ -178,17 +178,18 @@ async def accept_rematch(room_id: str, body: RematchRequest) -> RematchAcceptanc
         # Everyone active has decided, and at least one person accepted
         try:
             lobby = await lobby_manager.create_rematch_lobby(tuple(all_accepted_ids), room_id)
-            await connection_manager.broadcast_to_scope(
-                "room",
-                room_id,
-                build_message(
-                    "rematch_ready",
-                    {
-                        "room_id": room_id,
-                        "next_lobby_id": lobby.id,
-                    },
-                ),
-            )
+            # Notify only the players who accepted so non-consenting players are not auto-redirected
+            for pid in all_accepted_ids:
+                await connection_manager.send_personal_message(
+                    pid,
+                    build_message(
+                        "rematch_ready",
+                        {
+                            "room_id": room_id,
+                            "next_lobby_id": lobby.id,
+                        },
+                    ),
+                )
             return RematchAcceptanceResponse(
                 room_id=room_id,
                 player_id=body.player_id,
@@ -267,17 +268,18 @@ async def decline_rematch(room_id: str, body: RematchRequest) -> RematchAcceptan
     if not pending and all_accepted_ids:
         try:
             lobby = await lobby_manager.create_rematch_lobby(tuple(all_accepted_ids), room_id)
-            await connection_manager.broadcast_to_scope(
-                "room",
-                room_id,
-                build_message(
-                    "rematch_ready",
-                    {
-                        "room_id": room_id,
-                        "next_lobby_id": lobby.id,
-                    },
-                ),
-            )
+            # Notify only the players who accepted so non-consenting players are not auto-redirected
+            for pid in all_accepted_ids:
+                await connection_manager.send_personal_message(
+                    pid,
+                    build_message(
+                        "rematch_ready",
+                        {
+                            "room_id": room_id,
+                            "next_lobby_id": lobby.id,
+                        },
+                    ),
+                )
         except ValueError:
             pass
 

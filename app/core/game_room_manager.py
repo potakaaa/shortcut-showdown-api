@@ -40,6 +40,11 @@ class GameRoomManager:
                 self._expiry.pop(room_id, None)
             return room
 
+    async def list_rooms(self) -> list[GameRoom]:
+        """Return a snapshot list of active rooms."""
+        async with self._lock:
+            return list(self._rooms.values())
+
     async def remove_player_from_all_rooms(self, player_id: str) -> None:
         """Remove the player from any game room (disconnect). Deletes empty rooms."""
         removed_from: str | None = None
