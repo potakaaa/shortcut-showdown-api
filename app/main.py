@@ -59,3 +59,46 @@ if __name__ == "__main__":
         "app.main:app",
         **uvicorn_kwargs,
     )
+
+
+@app.on_event("startup")
+async def _start_room_sweeper() -> None:
+    """Background task: periodically ensure room state to apply timeouts.
+
+    This ensures that rounds which expire are resolved and broadcast even
+    if no client activity occurs at the exact expiry moment.
+    """
+    import asyncio
+
+    from app.core.game_room_manager import game_room_manager
+    from app.core.game_engine import game_engine
+
+    async def _sweeper() -> None:
+        try:
+            while True:
+                rooms = await game_room_manager.list_rooms()
+                # Call ensure_room_state for each room to apply timeouts and broadcast
+                for room in rooms:
+                    try:
+                        await game_engine.ensure_room_state(room.id)
+                    except Exception:
+                        # best-effort: ignore per-room errors so sweeper continues
+                        pass
+                await asyncio.sleep(0.5)
+        except asyncio.CancelledError:
+            return
+
+    task = asyncio.create_task(_sweeper())
+    # store on app state so shutdown can cancel it if needed
+    app.state._room_sweeper_task = task
+
+
+@app.on_event("shutdown")
+async def _stop_room_sweeper() -> None:
+    task = getattr(app.state, "_room_sweeper_task", None)
+    if task is not None:
+        task.cancel()
+        try:
+            await task
+        except Exception:
+            pass

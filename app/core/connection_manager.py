@@ -133,12 +133,18 @@ class ConnectionManager:
         """Send a message to every active connection; drop broken sockets."""
         async with self._lock:
             snapshot = list(self._connections.items())
-        dead: list[str] = []
-        for connection_id, websocket in snapshot:
+
+        async def _attempt_send(connection_id: str, websocket: WebSocket) -> str | None:
             try:
                 await self._send(websocket, message)
+                return None
             except Exception:
-                dead.append(connection_id)
+                return connection_id
+
+        coros = [_attempt_send(cid, ws) for cid, ws in snapshot]
+        results = await asyncio.gather(*coros, return_exceptions=False)
+
+        dead: list[str] = [cid for cid in results if isinstance(cid, str)]
         for connection_id in dead:
             await self.disconnect(connection_id)
 
@@ -150,17 +156,23 @@ class ConnectionManager:
     ) -> None:
         """Send a message to all connections subscribed to a scope."""
         async with self._lock:
-            snapshot = []
-            for connection_id, websocket in self._connections.items():
-                subs = self._subscriptions.get(connection_id, {})
-                if subs.get(scope) == scope_id:
-                    snapshot.append((connection_id, websocket))
-        dead: list[str] = []
-        for connection_id, websocket in snapshot:
+            snapshot = [
+                (connection_id, websocket)
+                for connection_id, websocket in self._connections.items()
+                if self._subscriptions.get(connection_id, {}).get(scope) == scope_id
+            ]
+
+        async def _attempt_send(connection_id: str, websocket: WebSocket) -> str | None:
             try:
                 await self._send(websocket, message)
+                return None
             except Exception:
-                dead.append(connection_id)
+                return connection_id
+
+        coros = [_attempt_send(cid, ws) for cid, ws in snapshot]
+        results = await asyncio.gather(*coros, return_exceptions=False)
+
+        dead: list[str] = [cid for cid in results if isinstance(cid, str)]
         for connection_id in dead:
             await self.disconnect(connection_id)
 

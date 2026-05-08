@@ -330,6 +330,24 @@ class LobbyManager:
         )
         await connection_manager.clear_subscription(target_player_id, "lobby")
         await connection_manager.clear_subscription(target_player_id, "room")
+
+        # Notify the kicked player directly so their client can update immediately
+        try:
+            await connection_manager.send_personal_message(
+                target_player_id,
+                build_message(
+                    "kicked_from_lobby",
+                    {
+                        "lobby_id": lobby_id,
+                        "actor_player_id": actor_player_id,
+                        "message": "You were removed from the lobby",
+                    },
+                ),
+            )
+        except Exception:
+            # best-effort notify; if it fails, the connection manager
+            # will handle disconnects
+            pass
         await self._broadcast_lobby_update(
             updated,
             change="kicked",
