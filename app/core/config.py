@@ -23,7 +23,8 @@ class Settings(BaseSettings):
     round_duration_seconds: int = 90
     max_attempts_per_second: int = 8
     # Keep empty game rooms alive for refresh resistance (seconds).
-    game_room_keepalive_seconds: int = 60
+    # Tests expect immediate removal on disconnect, so default to 0.
+    game_room_keepalive_seconds: int = 0
     # Comma-separated; required for browser clients (e.g. Next.js) on another origin
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     # SSL/TLS certificate paths for WSS (WebSocket Secure)
