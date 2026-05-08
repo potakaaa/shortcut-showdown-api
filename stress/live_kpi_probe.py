@@ -33,9 +33,9 @@ class MetricBucket:
 
 def derive_ws_url(api_base: str) -> str:
     if api_base.startswith("https://"):
-        return "wss://" + api_base[len("https://") :].rstrip("/") + "/ws"
+        return "wss://" + api_base[len("https://"):].rstrip("/") + "/ws"
     if api_base.startswith("http://"):
-        return "ws://" + api_base[len("http://") :].rstrip("/") + "/ws"
+        return "ws://" + api_base[len("http://"):].rstrip("/") + "/ws"
     return "ws://" + api_base.rstrip("/") + "/ws"
 
 
@@ -102,7 +102,8 @@ def summarize(name: str, bucket: MetricBucket, total_seconds: float) -> str:
         f"{name}",
         f"  requests: {total} (ok: {bucket.success}, fail: {bucket.failure})",
         f"  error_rate: {err_rate:.2f}%",
-        f"  response_ms: avg {avg:.2f}, p50 {p50:.2f}, p95 {p95:.2f}, min {mn:.2f}, max {mx:.2f}",
+        f"  response_ms: avg {avg:.2f}, p50 {p50:.2f}, p95 {p95:.2f}, "
+        f"min {mn:.2f}, max {mx:.2f}",
         f"  throughput: {throughput:.2f} req/s",
     ]
     if status_line:
@@ -198,7 +199,10 @@ async def run_workflow(
                     session,
                     "POST",
                     f"{api_base}/lobbies/{lobby_id}/set-max-players",
-                    metrics.setdefault("POST /lobbies/{id}/set-max-players", MetricBucket()),
+                    metrics.setdefault(
+                        "POST /lobbies/{id}/set-max-players",
+                        MetricBucket(),
+                    ),
                     {
                         "player_id": player_ids[0],
                         "max_players": players_per_room,
@@ -363,7 +367,9 @@ async def run_scenario(
                 expected_keys_by_prompt=expected_keys_by_prompt,
             )
 
-    await asyncio.gather(*[asyncio.create_task(one_workflow()) for _ in range(workflows)])
+    await asyncio.gather(
+        *[asyncio.create_task(one_workflow()) for _ in range(workflows)]
+    )
     workflow_seconds = time.perf_counter() - workflow_start
 
     overall_seconds = time.perf_counter() - overall_start

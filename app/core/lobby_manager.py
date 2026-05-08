@@ -345,7 +345,8 @@ class LobbyManager:
                 ),
             )
         except Exception:
-            # best-effort notify; if it fails, the connection manager will handle disconnects
+            # best-effort notify; if it fails, the connection manager
+            # will handle disconnects
             pass
         await self._broadcast_lobby_update(
             updated,

@@ -10,7 +10,14 @@ from fastapi import WebSocket
 
 from app.models.player import Player, PlayerStatus
 
-_ALLOWED_PLAYER_FIELDS = frozenset({"display_name", "status", "current_room", "is_ready"})
+_ALLOWED_PLAYER_FIELDS = frozenset(
+    {
+        "display_name",
+        "status",
+        "current_room",
+        "is_ready",
+    }
+)
 
 
 class ConnectionManager:
@@ -50,7 +57,12 @@ class ConnectionManager:
             )
             return connection_id
 
-    async def set_subscription(self, connection_id: str, scope: str, scope_id: str) -> None:
+    async def set_subscription(
+        self,
+        connection_id: str,
+        scope: str,
+        scope_id: str,
+    ) -> None:
         """Attach a connection to a logical broadcast scope."""
         async with self._lock:
             if connection_id not in self._connections:
@@ -58,7 +70,11 @@ class ConnectionManager:
             subscriptions = self._subscriptions.setdefault(connection_id, {})
             subscriptions[scope] = scope_id
 
-    async def clear_subscription(self, connection_id: str, scope: str | None = None) -> None:
+    async def clear_subscription(
+        self,
+        connection_id: str,
+        scope: str | None = None,
+    ) -> None:
         """Remove a subscription for a connection, or all subscriptions."""
         async with self._lock:
             if scope is None:
