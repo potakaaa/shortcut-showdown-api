@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "build"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shortcut-showdown-api"
+version = "0.0.0"
+description = "Shortcut Showdown API - multiplayer typing game service"
+authors = [ { name = "" } ]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+
+[tool.setuptools]
+package-dir = { "" = "app" }

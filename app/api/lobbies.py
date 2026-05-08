@@ -10,11 +10,11 @@ from pydantic import BaseModel
 from app.api.game_rooms import game_room_to_response
 from app.core.config import get_settings
 from app.core.connection_manager import connection_manager
-
-logger = logging.getLogger(__name__)
 from app.core.lobby_manager import lobby_manager
 from app.models.game_room import GameRoomView
 from app.models.lobby import Lobby, LobbyPlayerView, LobbyView
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/lobbies", tags=["lobbies"])
 
@@ -123,7 +123,10 @@ async def quick_play(body: PlayerIdBody) -> LobbyView:
 
 @router.post("/{lobby_id}/join", response_model=LobbyView)
 async def join_lobby(lobby_id: str, body: PlayerIdBody) -> LobbyView:
-    """Join an existing lobby when it is not full. (Locked status is hidden from quick-play but directly joinable)."""
+    """Join an existing lobby when it is not full.
+
+    Locked status is hidden from quick-play but is directly joinable.
+    """
     try:
         lobby = await lobby_manager.join_lobby(lobby_id, body.player_id)
     except LookupError as exc:

@@ -13,7 +13,9 @@ import random
 from app.services.shortcut_dataset import get_default_dataset
 
 
-def generate_shortcut_sequence(count: int = 10, rng: random.Random | None = None) -> List[Dict[str, Any]]:
+def generate_shortcut_sequence(
+    count: int = 10, rng: random.Random | None = None
+) -> List[Dict[str, Any]]:
     """Return a randomized sequence of shortcut challenges.
 
     - If `count` <= number of available unique challenges, a random sample
@@ -38,6 +40,7 @@ def generate_shortcut_sequence(count: int = 10, rng: random.Random | None = None
         entry["index"] = idx
         result.append(entry)
     return result
+
 
 def mask_challenge_for_player(challenge: Dict[str, Any]) -> Dict[str, Any]:
     """Return the public view of a challenge (remove internal answers)."""
