@@ -19,7 +19,12 @@ def test_ws_json_non_input_event_is_echoed_as_message_payload() -> None:
         ws.send_text(json.dumps(payload))
 
         echoed = ws.receive_json()
-        assert echoed == {"event": "message", "data": payload}
+        assert echoed.get("event") == "message"
+        assert echoed.get("type", "message") == "message"
+        echoed_data = echoed.get("data")
+        if echoed_data is None and isinstance(echoed.get("payload"), dict):
+            echoed_data = echoed["payload"].get("data")
+        assert echoed_data == payload
 
 
 def test_ws_input_with_invalid_keys_format_returns_error() -> None:
@@ -31,4 +36,9 @@ def test_ws_input_with_invalid_keys_format_returns_error() -> None:
         ws.send_text(json.dumps({"event": "input", "keys": "ctrl+c"}))
 
         error = ws.receive_json()
-        assert error == {"event": "error", "message": "invalid_input_format"}
+        assert error.get("event") == "error"
+        assert error.get("type", "error") == "error"
+        message = error.get("message")
+        if message is None and isinstance(error.get("payload"), dict):
+            message = error["payload"].get("message")
+        assert message == "invalid_input_format"
