@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from app.core.websocket_protocol import build_error, build_message, parse_inbound_message
+from app.core.websocket_protocol import (
+    build_error,
+    build_message,
+    parse_inbound_message,
+)
 
 
 def test_build_message_sets_version_and_aliases() -> None:
