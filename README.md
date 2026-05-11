@@ -44,10 +44,6 @@ Backend service for **Shortcut Showdown**, built with [FastAPI](https://fastapi.
 
 ## Architecture
 
-<details>
-<summary><strong>Authoritative Core & Routers</strong> — expand to view detailed diagram</summary>
-
-<figure>
 ```mermaid
 flowchart TB
   subgraph FastAPI["FastAPI ASGI App (single uvicorn process)"]
@@ -98,15 +94,9 @@ flowchart TB
   class L1,L2 sub
 ```
 
-<figcaption>Detailed view of routers, core managers, and services. Expand/collapse for readability.</figcaption>
-</figure>
-
-</details>
+Detailed view of routers, core managers, and services.
 
 ## WebSocket Protocol
-
-<details>
-<summary><strong>WebSocket sequence (connect → gameplay)</strong> — expand to view</summary>
 
 ```mermaid
 sequenceDiagram
@@ -174,9 +164,7 @@ sequenceDiagram
   GE-->>P1: ordered placements
 ```
 
-This sequence diagram outlines the primary realtime flow from connection through match resolution. Use the collapsed view to keep the README concise.
-
-</details>
+This sequence diagram outlines the primary realtime flow from connection through match resolution.
 
 ## Features
 
