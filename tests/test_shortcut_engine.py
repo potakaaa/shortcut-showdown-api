@@ -43,7 +43,10 @@ def test_mask_and_publicize_hide_expected_keys() -> None:
     assert masked == {"prompt": "Copy selected text", "index": 0}
     assert "expectedKeys" in challenge
 
-    challenges = [challenge, {"prompt": "Paste", "expectedKeys": ["ctrl", "v"], "index": 1}]
+    challenges = [
+        challenge,
+        {"prompt": "Paste", "expectedKeys": ["ctrl", "v"], "index": 1},
+    ]
     public = publicize_challenges(challenges)
     assert public == [
         {"prompt": "Copy selected text", "index": 0},
