@@ -37,6 +37,7 @@
 
 - [Team](#team)
 - [Architecture](#architecture)
+- [PDC Concepts](#pdc-concepts)
 - [WebSocket Protocol](#websocket-protocol)
 - [Features](#features)
 
@@ -54,7 +55,7 @@ flowchart TB
       R4["ws.py<br/>(WebSocket endpoint)"]
     end
 
-    subgraph Core["Authoritative Core — each manager guarded by asyncio.Lock"]
+    subgraph Core["Authoritative Core — managers guard global data; GameEngine uses per-room locks (data partitioning to reduce contention)"]
       CM["ConnectionManager<br/>connections {cid → WebSocket}<br/>players {cid → Player}<br/>subscriptions {cid → {scope → id}}"]
       LM["LobbyManager<br/>lobbies {id → Lobby}<br/>lobby code RNG<br/>kick / ready / max-players"]
       GRM["GameRoomManager<br/>rooms {id → GameRoom}"]
@@ -95,6 +96,10 @@ flowchart TB
 ```
 
 Detailed view of routers, core managers, and services.
+
+## PDC Concepts
+
+See [docs/PDC_CONCEPTS.md](docs/PDC_CONCEPTS.md) for the project decision context behind the concurrency model, authoritative-server pattern, scoped fan-out, and consistency mechanisms used by the API.
 
 ## WebSocket Protocol
 
@@ -139,8 +144,8 @@ sequenceDiagram
 
   Note over P1,P2: Phase 4 — Concurrent Gameplay
   par Player 1 attempt
-    P1->>GE: POST /attempts {keys, attempt_id}
-    GE->>GE: acquire lock → rate-limit check
+  P1->>GE: POST /attempts {keys, attempt_id}
+  GE->>GE: acquire per-room lock → rate-limit check
     GE->>GE: validate keys vs expectedKeys
     GE->>GE: cache attempt_receipts[attempt_id]
     GE->>GE: increment state_version
