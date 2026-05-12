@@ -37,6 +37,7 @@
 
 - [Team](#team)
 - [Architecture](#architecture)
+- [PDC Concepts](#pdc-concepts)
 - [WebSocket Protocol](#websocket-protocol)
 - [Features](#features)
 
@@ -95,6 +96,10 @@ flowchart TB
 ```
 
 Detailed view of routers, core managers, and services.
+
+## PDC Concepts
+
+See [docs/PDC_CONCEPTS.md](docs/PDC_CONCEPTS.md) for the project decision context behind the concurrency model, authoritative-server pattern, scoped fan-out, and consistency mechanisms used by the API.
 
 ## WebSocket Protocol
 
