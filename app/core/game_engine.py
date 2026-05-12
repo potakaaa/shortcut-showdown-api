@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from weakref import WeakValueDictionary
 from typing import Any
 
 from app.core.config import get_settings
@@ -38,7 +39,21 @@ class GameEngine:
     """Server-owned state machine for multiplayer gameplay."""
 
     def __init__(self) -> None:
-        self._lock = asyncio.Lock()
+        # Per-room locks to partition access and reduce contention.
+        # Use a WeakValueDictionary so locks are GC'd when no longer referenced.
+        self._room_locks: WeakValueDictionary[str, asyncio.Lock] = WeakValueDictionary()
+        self._locks_creation_lock = asyncio.Lock()
+
+    async def _get_room_lock(self, room_id: str) -> asyncio.Lock:
+        """Return an asyncio.Lock for a room, creating it safely if needed."""
+        lock = self._room_locks.get(room_id)
+        if lock is None:
+            async with self._locks_creation_lock:
+                lock = self._room_locks.get(room_id)
+                if lock is None:
+                    lock = asyncio.Lock()
+                    self._room_locks[room_id] = lock
+        return lock
 
     @staticmethod
     def _canonical_key_token(value: str) -> str:
@@ -449,7 +464,8 @@ class GameEngine:
         timed_out = False
         result_event: dict[str, Any] | None = None
 
-        async with self._lock:
+        lock = await self._get_room_lock(room.id)
+        async with lock:
             now = time.time()
             timed_out = self._resolve_timeout_if_needed_locked(room, now)
             state = self._serialize_state_locked(room, now)
@@ -469,7 +485,8 @@ class GameEngine:
             return refreshed
 
         now = time.time()
-        async with self._lock:
+        lock = await self._get_room_lock(room.id)
+        async with lock:
             return self._serialize_state_locked(room, now)
 
     async def get_match_results(
@@ -489,7 +506,8 @@ class GameEngine:
             raise LookupError("Game room not found")
 
         ended_at = state.finished_at if state.finished_at is not None else time.time()
-        async with self._lock:
+        lock = await self._get_room_lock(room.id)
+        async with lock:
             roster = self._match_roster_locked(room)
             rankings = self._result_rankings_locked(room, roster, ended_at)
 
@@ -568,7 +586,8 @@ class GameEngine:
         should_broadcast_state = False
         result_event: dict[str, Any] | None = None
 
-        async with self._lock:
+        lock = await self._get_room_lock(room.id)
+        async with lock:
             now = time.time()
             gs = room.game_state
 
@@ -807,7 +826,8 @@ class GameEngine:
         state: GameStateView | None = None
         result_event: dict[str, Any] | None = None
 
-        async with self._lock:
+        lock = await self._get_room_lock(room.id)
+        async with lock:
             now = time.time()
             remaining = tuple(
                 pid for pid in room.players if pid != forfeiting_player_id
