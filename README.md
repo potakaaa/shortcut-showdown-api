@@ -1,37 +1,44 @@
 # Shortcut Showdown API
 
-```mermaid
-flowchart TB
-    subgraph Clients["Game Clients"]
-        C1["Player 1<br/>(Browser)"]
-        C2["Player 2<br/>(Browser)"]
-        CN["Player N<br/>(Browser)"]
-    end
+## Team
 
-    subgraph Vercel["Vercel (Edge)"]
-        FE["Next.js 16 App Router<br/>React 19 + Tailwind<br/>WS client + REST fallback"]
-    end
+<div align="center">
 
-    subgraph Render["Render (Origin)"]
-        BE["FastAPI ASGI Server<br/>uvicorn worker<br/>(single instance)"]
-    end
+<table>
+<tr>
+<td align="center" width="50%" valign="top">
+  <img src="https://github.com/hdmGOAT.png" width="88" height="88" alt="Hans Matthew Del Mundo" /><br />
+  <strong>Hans Matthew Del Mundo</strong><br />
+  <a href="https://github.com/hdmGOAT"><kbd>@hdmGOAT</kbd></a>
+</td>
+<td align="center" width="50%" valign="top">
+  <img src="https://github.com/potakaaa.png" width="88" height="88" alt="Gerald Helbiro Jr." /><br />
+  <strong>Gerald Helbiro Jr.</strong><br />
+  <a href="https://github.com/potakaaa"><kbd>@potakaaa</kbd></a>
+</td>
+</tr>
+<tr>
+<td align="center" width="50%" valign="top">
+  <img src="https://github.com/areeesss.png" width="88" height="88" alt="Vin Marcus Gerebise" /><br />
+  <strong>Vin Marcus Gerebise</strong><br />
+  <a href="https://github.com/areeesss"><kbd>@areeesss</kbd></a>
+</td>
+<td align="center" width="50%" valign="top">
+  <img src="https://github.com/unripelo.png" width="88" height="88" alt="Ira Chloie Narisma" /><br />
+  <strong>Ira Chloie Narisma</strong><br />
+  <a href="https://github.com/unripelo"><kbd>@unripelo</kbd></a>
+</td>
+</tr>
+</table>
 
-    C1 -->|HTTPS<br/>page loads| FE
-    C2 -->|HTTPS<br/>page loads| FE
-    CN -->|HTTPS<br/>page loads| FE
+</div>
 
-    FE -.->|REST snapshots<br/>fallback only| BE
-    C1 ===|"WSS /ws<br/>(primary realtime)"| BE
-    C2 ===|"WSS /ws<br/>(primary realtime)"| BE
-    CN ===|"WSS /ws<br/>(primary realtime)"| BE
+## Table of Contents
 
-    classDef client fill:#dbeafe,stroke:#1e40af
-    classDef edge fill:#fef3c7,stroke:#a16207
-    classDef origin fill:#dcfce7,stroke:#15803d
-    class C1,C2,CN client
-    class FE edge
-    class BE origin
-```
+- [Team](#team)
+- [Architecture](#architecture)
+- [WebSocket Protocol](#websocket-protocol)
+- [Features](#features)
 
 Backend service for **Shortcut Showdown**, built with [FastAPI](https://fastapi.tiangolo.com/). It exposes a simple health check and a WebSocket endpoint for real-time messaging during gameplay.
 
@@ -39,121 +46,125 @@ Backend service for **Shortcut Showdown**, built with [FastAPI](https://fastapi.
 
 ```mermaid
 flowchart TB
-    subgraph FastAPI["FastAPI ASGI App (single uvicorn process)"]
-        subgraph Routers["HTTP + WS Routers"]
-            R1[lobbies.py]
-            R2[game_rooms.py]
-            R3[players.py]
-            R4["ws.py<br/>(WebSocket endpoint)"]
-        end
-
-        subgraph Core["Authoritative Core — each manager guarded by asyncio.Lock"]
-            CM["ConnectionManager<br/>connections {cid → WebSocket}<br/>players {cid → Player}<br/>subscriptions {cid → {scope → id}}"]
-            LM["LobbyManager<br/>lobbies {id → Lobby}<br/>lobby code RNG<br/>kick / ready / max-players"]
-            GRM["GameRoomManager<br/>rooms {id → GameRoom}"]
-            GE["GameEngine<br/>authoritative state machine<br/>per-player rate limiter<br/>idempotent attempt_receipts<br/>monotonic state_version"]
-        end
-
-        subgraph Services["Services"]
-            SE["shortcut_engine<br/>random.Random(lobby_id)<br/>→ identical challenges per room"]
-            SD[shortcut_dataset]
-        end
-
-        R1 --> LM
-        R1 --> CM
-        R2 --> GE
-        R2 --> GRM
-        R3 --> CM
-        R4 --> CM
-
-        LM --> CM
-        LM --> GRM
-        LM --> SE
-        GE --> GRM
-        GE --> CM
-        SE --> SD
+  subgraph FastAPI["FastAPI ASGI App (single uvicorn process)"]
+    subgraph Routers["HTTP + WS Routers"]
+      R1[lobbies.py]
+      R2[game_rooms.py]
+      R3[players.py]
+      R4["ws.py<br/>(WebSocket endpoint)"]
     end
 
-    CM -.->|"broadcast_to_scope<br/>(lobby, lobby_id, msg)"| L1["Lobby Subscribers"]
-    CM -.->|"broadcast_to_scope<br/>(room, room_id, msg)"| L2["Room Subscribers"]
+    subgraph Core["Authoritative Core — each manager guarded by asyncio.Lock"]
+      CM["ConnectionManager<br/>connections {cid → WebSocket}<br/>players {cid → Player}<br/>subscriptions {cid → {scope → id}}"]
+      LM["LobbyManager<br/>lobbies {id → Lobby}<br/>lobby code RNG<br/>kick / ready / max-players"]
+      GRM["GameRoomManager<br/>rooms {id → GameRoom}"]
+      GE["GameEngine<br/>authoritative state machine<br/>per-player rate limiter<br/>idempotent attempt_receipts<br/>monotonic state_version"]
+    end
 
-    classDef router fill:#e0e7ff,stroke:#3730a3
-    classDef core fill:#fef3c7,stroke:#a16207
-    classDef service fill:#dcfce7,stroke:#15803d
-    classDef sub fill:#fce7f3,stroke:#9d174d
-    class R1,R2,R3,R4 router
-    class CM,LM,GRM,GE core
-    class SE,SD service
-    class L1,L2 sub
+    subgraph Services["Services"]
+      SE["shortcut_engine<br/>random.Random(lobby_id)<br/>→ identical challenges per room"]
+      SD[shortcut_dataset]
+    end
+
+    R1 --> LM
+    R1 --> CM
+    R2 --> GE
+    R2 --> GRM
+    R3 --> CM
+    R4 --> CM
+
+    LM --> CM
+    LM --> GRM
+    LM --> SE
+    GE --> GRM
+    GE --> CM
+    SE --> SD
+  end
+
+  CM -.->|"broadcast_to_scope<br/>(lobby, lobby_id, msg)"| L1["Lobby Subscribers"]
+  CM -.->|"broadcast_to_scope<br/>(room, room_id, msg)"| L2["Room Subscribers"]
+
+  classDef router fill:#e0e7ff,stroke:#3730a3
+  classDef core fill:#fef3c7,stroke:#a16207
+  classDef service fill:#dcfce7,stroke:#15803d
+  classDef sub fill:#fce7f3,stroke:#9d174d
+  class R1,R2,R3,R4 router
+  class CM,LM,GRM,GE core
+  class SE,SD service
+  class L1,L2 sub
 ```
+
+Detailed view of routers, core managers, and services.
 
 ## WebSocket Protocol
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor P1 as Player 1
-    actor P2 as Player 2
-    participant WS as WS /ws
-    participant CM as ConnectionManager
-    participant LM as LobbyManager
-    participant SE as shortcut_engine
-    participant GE as GameEngine
+  autonumber
+  actor P1 as Player 1
+  actor P2 as Player 2
+  participant WS as WS /ws
+  participant CM as ConnectionManager
+  participant LM as LobbyManager
+  participant SE as shortcut_engine
+  participant GE as GameEngine
 
-    Note over P1,P2: Phase 1 — Connection
-    P1->>WS: connect (WSS upgrade)
-    WS->>CM: register conn → assign player_id
-    CM-->>P1: {v:1, type:"connect", player_id}
-    P2->>WS: connect
-    WS->>CM: register → player_id
-    CM-->>P2: {v:1, type:"connect", player_id}
+  Note over P1,P2: Phase 1 — Connection
+  P1->>WS: connect (WSS upgrade)
+  WS->>CM: register conn → assign player_id
+  CM-->>P1: {v:1, type:"connect", player_id}
+  P2->>WS: connect
+  WS->>CM: register → player_id
+  CM-->>P2: {v:1, type:"connect", player_id}
 
-    Note over P1,P2: Phase 2 — Lobby
-    P1->>LM: POST /lobbies/quick-play
-    LM->>LM: lock → create Lobby (P1 = leader)
-    LM->>CM: subscribe P1 to scope("lobby", lobby_id)
-    LM-->>P1: lobby payload
-    P2->>LM: POST /lobbies/quick-play
-    LM->>LM: lock → join existing lobby
-    LM->>CM: broadcast_to_scope("lobby", id, lobby_updated)
-    CM-->>P1: lobby_updated (P2 joined)
-    CM-->>P2: lobby_updated
+  Note over P1,P2: Phase 2 — Lobby
+  P1->>LM: POST /lobbies/quick-play
+  LM->>LM: lock → create Lobby (P1 = leader)
+  LM->>CM: subscribe P1 to scope("lobby", lobby_id)
+  LM-->>P1: lobby payload
+  P2->>LM: POST /lobbies/quick-play
+  LM->>LM: lock → join existing lobby
+  LM->>CM: broadcast_to_scope("lobby", id, lobby_updated)
+  CM-->>P1: lobby_updated (P2 joined)
+  CM-->>P2: lobby_updated
 
-    Note over P1,P2: Phase 3 — Authoritative Start
-    P1->>LM: POST /lobbies/{id}/start (leader only)
-    LM->>SE: generate_shortcut_sequence(seed=lobby_id)
-    Note right of SE: Deterministic RNG —<br/>same seed produces<br/>identical challenge sequence<br/>for every player in the room
-    LM->>GE: register room (state_version=1)
-    LM->>CM: broadcast_to_scope("room", id, challenges + game_state_update)
-    CM-->>P1: challenges + state v=1
-    CM-->>P2: challenges + state v=1
+  Note over P1,P2: Phase 3 — Authoritative Start
+  P1->>LM: POST /lobbies/{id}/start (leader only)
+  LM->>SE: generate_shortcut_sequence(seed=lobby_id)
+  Note right of SE: Deterministic RNG —<br/>same seed produces<br/>identical challenge sequence<br/>for every player in the room
+  LM->>GE: register room (state_version=1)
+  LM->>CM: broadcast_to_scope("room", id, challenges + game_state_update)
+  CM-->>P1: challenges + state v=1
+  CM-->>P2: challenges + state v=1
 
-    Note over P1,P2: Phase 4 — Concurrent Gameplay
-    par Player 1 attempt
-        P1->>GE: POST /attempts {keys, attempt_id}
-        GE->>GE: acquire lock → rate-limit check
-        GE->>GE: validate keys vs expectedKeys
-        GE->>GE: cache attempt_receipts[attempt_id]
-        GE->>GE: increment state_version
-        GE->>CM: broadcast progress_update + state_update
-    and Player 2 attempt
-        P2->>GE: POST /attempts {keys, attempt_id}
-        GE->>GE: acquire lock (serialized with P1)
-        GE->>GE: validate + cache + increment
-        GE->>CM: broadcast progress_update + state_update
-    end
-    CM-->>P1: state v=N
-    CM-->>P2: state v=N
+  Note over P1,P2: Phase 4 — Concurrent Gameplay
+  par Player 1 attempt
+    P1->>GE: POST /attempts {keys, attempt_id}
+    GE->>GE: acquire lock → rate-limit check
+    GE->>GE: validate keys vs expectedKeys
+    GE->>GE: cache attempt_receipts[attempt_id]
+    GE->>GE: increment state_version
+    GE->>CM: broadcast progress_update + state_update
+  and Player 2 attempt
+    P2->>GE: POST /attempts {keys, attempt_id}
+    GE->>GE: acquire lock (serialized with P1)
+    GE->>GE: validate + cache + increment
+    GE->>CM: broadcast progress_update + state_update
+  end
+  CM-->>P1: state v=N
+  CM-->>P2: state v=N
 
-    Note over P1,P2: Phase 5 — Resolution
-    GE->>GE: detect goal / timeout / forfeit
-    GE->>GE: deterministic tie-break:<br/>obj_index → accuracy → wpm → player_id
-    GE->>CM: broadcast game_result
-    CM-->>P1: game_result
-    CM-->>P2: game_result
-    P1->>GE: GET /results
-    GE-->>P1: ordered placements
+  Note over P1,P2: Phase 5 — Resolution
+  GE->>GE: detect goal / timeout / forfeit
+  GE->>GE: deterministic tie-break:<br/>obj_index → accuracy → wpm → player_id
+  GE->>CM: broadcast game_result
+  CM-->>P1: game_result
+  CM-->>P2: game_result
+  P1->>GE: GET /results
+  GE-->>P1: ordered placements
 ```
+
+This sequence diagram outlines the primary realtime flow from connection through match resolution.
 
 ## Features
 
@@ -166,6 +177,7 @@ sequenceDiagram
 - **WebSockets** — `WS /ws` accepts connections, assigns a `player_id`, and speaks a versioned JSON envelope for lobby and gameplay events.
 
 Gameplay determinism notes:
+
 - Challenge RNG is server-side and seeded by room id, so all players in a room receive the same objective sequence.
 - Timeout/forfeit tie-breaking order is deterministic: highest objective index, then highest accuracy, then highest WPM, then lexicographically smallest player id.
 - Bots/AI players are not implemented.
@@ -182,6 +194,7 @@ PATCH /players/{player_id}
 ```
 
 Rules for `display_name`:
+
 - Maximum length: 24 characters
 - Allowed characters: letters, numbers, spaces, `_`, and `-`
 - Leading and trailing whitespace is trimmed before validation and storage
@@ -189,6 +202,7 @@ Rules for `display_name`:
 - Display names can be updated while a player is in a lobby
 
 Validation errors use machine-readable `detail` values:
+
 - `display_name_empty`
 - `display_name_too_long`
 - `display_name_invalid_characters`
@@ -200,8 +214,8 @@ Lobby payloads return resolved player entries in join order:
 {
   "id": "K7M4QZ1",
   "players": [
-    {"player_id": "player-a", "display_name": "OPERATOR_01"},
-    {"player_id": "player-b", "display_name": "MAVERICK"}
+    { "player_id": "player-a", "display_name": "OPERATOR_01" },
+    { "player_id": "player-b", "display_name": "MAVERICK" }
   ],
   "status": "waiting"
 }
@@ -225,11 +239,13 @@ The recommended realtime path is a versioned envelope with `v`, `type`, and `pay
 ```
 
 The server keeps compatibility aliases during the migration window:
+
 - `event` mirrors `type`
 - top-level payload fields are flattened for older clients
 - raw text still echoes back as `message`
 
 Supported client events:
+
 - `join_lobby` subscribes the socket to a lobby and returns a `lobby_snapshot`
 - `join_room` subscribes the socket to a room and returns a `room_snapshot`
 - `sync_state` returns the current `game_state_sync` snapshot for a room
@@ -248,8 +264,8 @@ Lobby and room broadcasts use the same envelope:
     "lobby": {
       "id": "K7M4QZ1",
       "players": [
-        {"player_id": "player-a", "display_name": "OPERATOR_01"},
-        {"player_id": "player-b", "display_name": "MAVERICK"}
+        { "player_id": "player-a", "display_name": "OPERATOR_01" },
+        { "player_id": "player-b", "display_name": "MAVERICK" }
       ],
       "status": "full"
     }
@@ -268,6 +284,7 @@ GET /game-rooms/{room_id}/results?player_id={your-player-id}
 ```
 
 The results payload includes:
+
 - The room id for the match
 - `you_player_id` so the UI can highlight the current player
 - Ordered `placements[]` with `player_id`, `display_name`, `place`, WPM, accuracy, progress, attempts, and finish metadata
@@ -285,6 +302,7 @@ POST /game-rooms/{room_id}/rematch
 ```
 
 Rules:
+
 - The rematch request only succeeds once the match is finished.
 - The current live roster must still match the finished match roster.
 - If a player disconnects or leaves before rematch, the server rejects the request so the app does not start a partial rematch.
@@ -326,35 +344,4 @@ Interactive docs: `http://127.0.0.1:8000/docs` (when the server is running).
 pytest -q -o "addopts= "
 ```
 
-## 👥 Team
 
-<div align="center">
-
-<table>
-<tr>
-<td align="center" width="50%" valign="top">
-  <img src="https://github.com/hdmGOAT.png" width="88" height="88" alt="Hans Matthew Del Mundo" /><br />
-  <strong>Hans Matthew Del Mundo</strong><br />
-  <a href="https://github.com/hdmGOAT"><kbd>@hdmGOAT</kbd></a>
-</td>
-<td align="center" width="50%" valign="top">
-  <img src="https://github.com/potakaaa.png" width="88" height="88" alt="Gerald Helbiro Jr." /><br />
-  <strong>Gerald Helbiro Jr.</strong><br />
-  <a href="https://github.com/potakaaa"><kbd>@potakaaa</kbd></a>
-</td>
-</tr>
-<tr>
-<td align="center" width="50%" valign="top">
-  <img src="https://github.com/areeesss.png" width="88" height="88" alt="Vin Marcus Gerebise" /><br />
-  <strong>Vin Marcus Gerebise</strong><br />
-  <a href="https://github.com/areeesss"><kbd>@areeesss</kbd></a>
-</td>
-<td align="center" width="50%" valign="top">
-  <img src="https://github.com/unripelo.png" width="88" height="88" alt="Ira Chloie Narisma" /><br />
-  <strong>Ira Chloie Narisma</strong><br />
-  <a href="https://github.com/unripelo"><kbd>@unripelo</kbd></a>
-</td>
-</tr>
-</table>
-
-</div>
