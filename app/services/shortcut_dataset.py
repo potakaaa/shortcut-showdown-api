@@ -1,6 +1,8 @@
 """Default shortcut dataset for the Shortcut Showdown game.
 
 Prompts intentionally omit key hints; `expectedKeys` remains internal.
+Some prompts may also define `expectedKeyVariants` for alternate shortcuts that
+should be accepted as equivalent answers for the same action.
 
 Challenges use **Windows-style** bindings (Ctrl / Shift / Alt and key names like
 ``arrowleft``). They avoid browser-chrome and OS-capture chords (e.g. new tab,
@@ -19,10 +21,33 @@ DEFAULT_CHALLENGES: List[Dict[str, Any]] = [
     {"prompt": "Paste", "expectedKeys": ["ctrl", "v"]},
     {"prompt": "Cut", "expectedKeys": ["ctrl", "x"]},
     {"prompt": "Undo", "expectedKeys": ["ctrl", "z"]},
-    {"prompt": "Redo", "expectedKeys": ["ctrl", "y"]},
+    {
+        "prompt": "Indent",
+        "expectedKeys": ["ctrl", "]"],
+        "expectedKeyVariants": [["ctrl", "shift", "]"]],
+    },
+    {
+        "prompt": "Unindent",
+        "expectedKeys": ["ctrl", "["],
+        "expectedKeyVariants": [["ctrl", "shift", "["]],
+    },
+    {"prompt": "Find", "expectedKeys": ["ctrl", "f"]},
+    {"prompt": "Find and replace", "expectedKeys": ["ctrl", "h"]},
+    {"prompt": "Underline", "expectedKeys": ["ctrl", "u"]},
     {"prompt": "Select all", "expectedKeys": ["ctrl", "a"]},
     {"prompt": "Bold", "expectedKeys": ["ctrl", "b"]},
     {"prompt": "Italic", "expectedKeys": ["ctrl", "i"]},
+    {"prompt": "Paste without formatting", "expectedKeys": ["ctrl", "shift", "v"]},
+    {
+        "prompt": "Find next",
+        "expectedKeys": ["f3"],
+        "expectedKeyVariants": [["ctrl", "g"]],
+    },
+    {
+        "prompt": "Find previous",
+        "expectedKeys": ["shift", "f3"],
+        "expectedKeyVariants": [["ctrl", "shift", "g"]],
+    },
     {"prompt": "Move the caret one word left", "expectedKeys": ["ctrl", "arrowleft"]},
     {"prompt": "Move the caret one word right", "expectedKeys": ["ctrl", "arrowright"]},
     {"prompt": "Delete the previous word", "expectedKeys": ["ctrl", "backspace"]},
@@ -34,9 +59,11 @@ DEFAULT_CHALLENGES: List[Dict[str, Any]] = [
         "prompt": "Go to the end of the line or the current text (editor / browser)",
         "expectedKeys": ["ctrl", "end"],
     },
+    {"prompt": "Focus the address bar", "expectedKeys": ["ctrl", "l"]},
     {
         "prompt": "Redo (alternate shortcut, common in many apps)",
         "expectedKeys": ["ctrl", "shift", "z"],
+        "expectedKeyVariants": [["ctrl", "y"]],
     },
     {
         "prompt": "Delete the next word (after the caret)",

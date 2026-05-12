@@ -21,7 +21,7 @@ from app.models.game_room import (
     MatchResultsView,
     PlayerGameProgress,
 )
-from app.services.shortcut_engine import publicize_challenges
+from app.services.shortcut_engine import challenge_accepts_keys, publicize_challenges
 
 # Map raw client tokens to a single canonical name so different browsers / input
 # libraries still match the same `expectedKeys` (e.g. "return" vs "enter").
@@ -696,12 +696,8 @@ class GameEngine:
                                     reason="already_finished",
                                 )
                             else:
-                                raw_expected = challenges[expected_index].get(
-                                    "expectedKeys", []
-                                )
-                                expected_keys = self._normalize_keys(list(raw_expected))
-                                provided_keys = self._normalize_keys(keys)
-                                correct = expected_keys == provided_keys
+                                challenge = challenges[expected_index]
+                                correct = challenge_accepts_keys(challenge, keys)
 
                                 attempts_total_val = int(
                                     progress.get("attempts_total", 0)

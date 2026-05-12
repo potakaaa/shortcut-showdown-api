@@ -108,3 +108,39 @@ def test_winner_and_rankings_broadcasted() -> None:
             assert got1 is not None and got2 is not None
             rankings = got1["rankings"]
             assert rankings[0]["player_id"] == p1
+
+
+def test_redo_accepts_equivalent_shortcut_variants() -> None:
+    client = TestClient(app)
+    with client.websocket_connect("/ws") as ws:
+        pid = ws.receive_json()["player_id"]
+        lobby_id = client.post("/lobbies", json={"player_id": pid}).json()["id"]
+        client.post(f"/lobbies/{lobby_id}/start", json={"player_id": pid})
+
+        # drain startup messages until gameplay challenges arrive
+        while True:
+            msg = ws.receive_json()
+            if msg["event"] == "challenges":
+                break
+
+        async def set_redo_challenge() -> None:
+            room = await game_room_manager.get_room(lobby_id)
+            assert room is not None
+            room.game_state["challenges"] = [
+                {
+                    "prompt": "Redo",
+                    "expectedKeys": ["ctrl", "shift", "z"],
+                    "expectedKeyVariants": [["ctrl", "y"]],
+                }
+            ]
+
+        asyncio.run(set_redo_challenge())
+
+        ws.send_text(json.dumps({"event": "input", "keys": ["ctrl", "y"]}))
+
+        while True:
+            m = ws.receive_json()
+            if m.get("event") == "progress_update":
+                assert m["index"] == 1
+                assert m["score"] == 1
+                break
