@@ -254,6 +254,48 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         },
                     ),
                 )
+
+            elif event == "chat_message":
+                lobby_id = message.get("lobby_id")
+                text = message.get("text")
+
+                if not isinstance(lobby_id, str) or not lobby_id:
+                    await connection_manager.send_personal_message(
+                        connection_id,
+                        build_error("invalid_lobby_id"),
+                    )
+                    continue
+
+                if not isinstance(text, str) or not text:
+                    await connection_manager.send_personal_message(
+                        connection_id,
+                        build_error("invalid_message_text"),
+                    )
+                    continue
+
+                player = await connection_manager.get_player(connection_id)
+                if player is None or player.current_room != lobby_id:
+                    await connection_manager.send_personal_message(
+                        connection_id,
+                        build_error("forbidden_action"),
+                    )
+                    continue
+
+                display_name = player.display_name if player and player.display_name else connection_id
+                await connection_manager.broadcast_to_scope(
+                    "lobby",
+                    lobby_id,
+                    build_message(
+                        "chat_message",
+                        {
+                            "lobby_id": lobby_id,
+                            "player_id": connection_id,
+                            "display_name": display_name,
+                            "text": text,
+                        },
+                    ),
+                )
+
             else:
                 await connection_manager.send_personal_message(
                     connection_id,

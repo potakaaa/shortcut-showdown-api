@@ -42,3 +42,41 @@ def test_ws_input_with_invalid_keys_format_returns_error() -> None:
         if message is None and isinstance(error.get("payload"), dict):
             message = error["payload"].get("message")
         assert message == "invalid_input_format"
+
+
+def test_ws_chat_message_in_lobby_broadcasts_to_subscribers() -> None:
+    client = TestClient(app)
+    with client.websocket_connect("/ws") as ws:
+        pid = ws.receive_json()["player_id"]
+        lobby_id = client.post("/lobbies", json={"player_id": pid}).json()["id"]
+
+        # consume the lobby broadcast from the create call
+        ws.receive_json()
+
+        ws.send_text(
+            json.dumps(
+                {
+                    "v": 1,
+                    "type": "join_lobby",
+                    "payload": {"lobby_id": lobby_id, "player_id": pid},
+                }
+            )
+        )
+        ws.receive_json()
+        ws.receive_json()
+
+        ws.send_text(
+            json.dumps(
+                {
+                    "v": 1,
+                    "type": "chat_message",
+                    "payload": {"lobby_id": lobby_id, "text": "Hello lobby"},
+                }
+            )
+        )
+
+        chat = ws.receive_json()
+        assert chat["type"] == "chat_message"
+        assert chat["payload"]["lobby_id"] == lobby_id
+        assert chat["payload"]["text"] == "Hello lobby"
+        assert chat["payload"]["player_id"] == pid
