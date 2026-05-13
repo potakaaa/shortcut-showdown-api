@@ -281,7 +281,11 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     )
                     continue
 
-                display_name = player.display_name if player and player.display_name else connection_id
+                display_name = (
+                    player.display_name
+                    if (player and player.display_name)
+                    else connection_id
+                )
                 await connection_manager.broadcast_to_scope(
                     "lobby",
                     lobby_id,

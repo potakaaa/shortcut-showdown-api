@@ -742,7 +742,9 @@ class GameEngine:
                                 else:
                                     # Incorrect attempt: reset streak and track failures
                                     progress["streak"] = 0
-                                    failures = int(progress.get("consecutive_failures", 0)) + 1
+                                    failures = int(
+                                        progress.get("consecutive_failures", 0)
+                                    ) + 1
                                     progress["consecutive_failures"] = failures
                                     # If failures exceed configured threshold, skip this objective
                                     threshold = int(get_settings().skip_after_failures)
