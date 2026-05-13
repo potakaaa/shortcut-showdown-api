@@ -169,7 +169,10 @@ async def accept_rematch(
             active_players.append(pid)
 
     pending = [pid for pid in active_players if pid not in acceptances]
-    all_accepted_ids = [pid for pid, val in acceptances.items() if val is True]
+    all_accepted_ids = [
+        pid for pid in room.players
+        if acceptances.get(pid) is True
+    ]
     await connection_manager.broadcast_to_scope(
         "room",
         room_id,
@@ -281,7 +284,8 @@ async def decline_rematch(
 
     pending = [pid for pid in active_players if pid not in acceptances]
     all_accepted_ids = [
-        pid for pid, val in acceptances.items() if val is True
+        pid for pid in room.players
+        if acceptances.get(pid) is True
     ]
 
     if not pending and all_accepted_ids:
