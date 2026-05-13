@@ -746,8 +746,11 @@ class GameEngine:
                                         progress.get("consecutive_failures", 0)
                                     ) + 1
                                     progress["consecutive_failures"] = failures
-                                    # If failures exceed configured threshold, skip this objective
-                                    threshold = int(get_settings().skip_after_failures)
+                                    # If failures exceed configured threshold,
+                                    # skip this objective
+                                    threshold = int(
+                                        get_settings().skip_after_failures
+                                    )
                                     if failures >= threshold:
                                         # Advance objective (skip)
                                         progress["consecutive_failures"] = 0
