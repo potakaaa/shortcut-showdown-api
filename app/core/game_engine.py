@@ -81,6 +81,7 @@ class GameEngine:
             "attempts_correct": 0,
             "finished": False,
             "finished_at": None,
+            "consecutive_failures": 0,
         }
 
     @staticmethod
@@ -220,6 +221,7 @@ class GameEngine:
         else:
             player_progress["accuracy"] = (attempts_correct / attempts_total) * 100.0
 
+        elapsed = max(0.0, now - round_started_at)
         elapsed = max(0.0, now - round_started_at)
         if elapsed <= 0:
             player_progress["wpm"] = 0.0
@@ -703,6 +705,7 @@ class GameEngine:
                                     progress.get("attempts_total", 0)
                                 ) + 1
                                 progress["attempts_total"] = attempts_total_val
+                                skipped = False
                                 if correct:
                                     attempts_correct_val = int(
                                         progress.get("attempts_correct", 0)
@@ -713,6 +716,8 @@ class GameEngine:
                                         progress.get("streak", 0)
                                     ) + 1
                                     progress["streak"] = streak_val
+                                    # Reset consecutive failures on a correct attempt
+                                    progress["consecutive_failures"] = 0
 
                                     current_index_after = int(
                                         progress["objective_index"]
@@ -735,7 +740,22 @@ class GameEngine:
                                             **finish_kwargs,
                                         )
                                 else:
+                                    # Incorrect attempt: reset streak and track failures
                                     progress["streak"] = 0
+                                    failures = int(
+                                        progress.get("consecutive_failures", 0)
+                                    ) + 1
+                                    progress["consecutive_failures"] = failures
+                                    # If failures exceed configured threshold,
+                                    # skip this objective
+                                    threshold = int(
+                                        get_settings().skip_after_failures
+                                    )
+                                    if failures >= threshold:
+                                        # Advance objective (skip)
+                                        progress["consecutive_failures"] = 0
+                                        progress["objective_index"] = expected_index + 1
+                                        skipped = True
 
                                 start_time = float(gs.get("round_started_at", now))
                                 self._recompute_metrics(
@@ -761,6 +781,8 @@ class GameEngine:
                                     "score": score_val,
                                     "correct": correct,
                                 }
+                                if skipped:
+                                    progress_payload["skipped"] = True
                                 progress_event = build_message(
                                     "progress_update",
                                     progress_payload,
@@ -784,6 +806,7 @@ class GameEngine:
                                     accepted=True,
                                     reason=None,
                                     correct=correct,
+                                    skipped=skipped,
                                     objective_index=obj_index_val,
                                     state_version=state_version_val,
                                     game_state=state,
@@ -794,6 +817,7 @@ class GameEngine:
                         "accepted": response.accepted,
                         "reason": response.reason,
                         "correct": response.correct,
+                        "skipped": getattr(response, "skipped", False),
                         "objective_index": response.objective_index,
                         "state_version": response.state_version,
                     }

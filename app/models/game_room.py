@@ -375,6 +375,7 @@ class AttemptResponse(BaseModel):
     accepted: bool
     reason: str | None = None
     correct: bool | None = None
+    skipped: bool | None = None
     objective_index: int = 0
     state_version: int = 0
     game_state: GameStateView
