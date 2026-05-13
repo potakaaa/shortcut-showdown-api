@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     challenge_count: int = 10
     round_duration_seconds: int = 90
     max_attempts_per_second: int = 8
+    # If a player fails this many times on the same objective, advance (skip) it.
+    skip_after_failures: int = 3
     # Keep empty game rooms alive for refresh resistance (seconds).
     # Tests expect immediate removal on disconnect, so default to 0.
     game_room_keepalive_seconds: int = 0
